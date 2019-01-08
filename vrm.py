@@ -15,6 +15,7 @@ class Buffer():
 		if self.data is None:
 			raise Exception("unsuppoted buffer type")
 		if offset < 0 or self.byteLength < offset + length:
+			print(offset, length, self.byteLength)
 			raise Exception("out-of-bounds buffer read")
 		return self.data[offset:offset+length]
 
@@ -80,7 +81,7 @@ class Image():
 		else:
 			self.uri = None
 		if "bufferView" in info:
-			self.bufferView = info["bufferView"]
+			self.bufferView = bufferViews[info["bufferView"]]
 			self.mimeType = info["mimeType"]
 		else:
 			self.bufferView = None
