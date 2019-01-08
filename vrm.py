@@ -112,9 +112,11 @@ class Material():
 		else:
 			self.baseColorFactor = None
 		if "baseColorTexture" in pmr:
+			self.baseColorTextureIndex = pmr["baseColorTexture"]["index"]
 			self.baseColorTexture = textures[pmr["baseColorTexture"]["index"]]
 			self.baseColorTextureCoord =  textures[pmr["baseColorTexture"]["texCoord"]]
 		else:
+			self.baseColorTextureIndex = None
 			self.baseColorTexture = None
 			self.baseColorTextureCoord = None
 		self.metallicFactor = pmr["metallicFactor"]
@@ -126,6 +128,7 @@ class Vertex():
 	UNSIGNED_SHORT = 3
 
 	def __init__(self):
+		self.index = None
 		self.position = None
 		self.normal = None
 		self.tangent = None
@@ -165,6 +168,7 @@ class Primitive():
 		for i in range(indices.count):
 			idx = indices.get(i)[0]
 			vert = Vertex()
+			vert.index = idx
 			if positions  is not None:
 				vert.position      = positions.get(idx)
 			if normals    is not None:
