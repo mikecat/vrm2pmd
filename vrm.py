@@ -73,6 +73,53 @@ class Accessor():
 		return struct.unpack(self.unpackStr,
 			self.bufferView.read(self.stride * index, self.elementSize))
 
+class Image():
+	def __init__(self, info, bufferViews):
+		if "uri" in info:
+			self.uri = info["uri"]
+		else:
+			self.uri = None
+		if "bufferView" in info:
+			self.bufferView = info["bufferView"]
+			self.mimeType = info["mimeType"]
+		else:
+			self.bufferView = None
+			self.mimeType = None
+		if self.uri is not None and self.bufferView is not None:
+			raise Exception("both uri and bufferView is provided for image")
+
+	def getData(self):
+		if self.uri is not None:
+			raise Exception("uri image is not supported")
+		else:
+			return self.bufferView.read(0, self.bufferView.byteLength)
+
+class Sampler():
+	def __init__(self, info):
+		self.info = info
+
+class Texture():
+	def __init__(self, info, samplers, images):
+		self.sampler = samplers[info["sampler"]]
+		self.source = images[info["source"]]
+
+class Material():
+	def __init__(self, info, textures):
+		self.name = info["name"]
+		pmr = info["pbrMetallicRoughness"]
+		if "baseColorFactor" in pmr:
+			self.baseColorFactor = pmr["baseColorFactor"]
+		else:
+			self.baseColorFactor = None
+		if "baseColorTexture" in pmr:
+			self.baseColorTexture = textures[pmr["baseColorTexture"]["index"]]
+			self.baseColorTextureCoord =  textures[pmr["baseColorTexture"]["texCoord"]]
+		else:
+			self.baseColorTexture = None
+			self.baseColorTextureCoord = None
+		self.metallicFactor = pmr["metallicFactor"]
+		self.roughnessFactor = pmr["roughnessFactor"]
+
 class Vertex():
 	FLOAT = 1
 	UNSIGNED_BYTE = 2
@@ -96,7 +143,7 @@ class Primitive():
 		5123 : Vertex.UNSIGNED_SHORT
 	}
 
-	def __init__(self, info, accessors):
+	def __init__(self, info, accessors, materials):
 		indices = accessors[info["indices"]]
 		def readAttribute(name):
 			if name in info["attributes"]:
@@ -112,7 +159,8 @@ class Primitive():
 		joints0s = readAttribute("JOINTS_0")
 		weights0s = readAttribute("WEIGHTS_0")
 
-		self.material = info["material"]
+		self.materialIndex = info["material"]
+		self.material = materials[self.materialIndex]
 		self.vertice = []
 		for i in range(indices.count):
 			idx = indices.get(i)[0]
@@ -141,9 +189,9 @@ class Primitive():
 			self.vertice.append(vert)
 
 class Mesh():
-	def __init__(self, info, accessors):
+	def __init__(self, info, accessors, materials):
 		self.name = info["name"]
-		self.primitives = [Primitive(p, accessors) for p in info["primitives"]]
+		self.primitives = [Primitive(p, accessors, materials) for p in info["primitives"]]
 
 class Vrm():
 	def __init__(self):
@@ -172,7 +220,11 @@ class Vrm():
 		buffers = [Buffer(b, defaultData) for b in jsonData["buffers"]]
 		bufferViews = [BufferView(bv, buffers) for bv in jsonData["bufferViews"]]
 		accessors = [Accessor(info, bufferViews) for info in jsonData["accessors"]]
-		meshes = [Mesh(m, accessors) for m in jsonData["meshes"]]
+		images = [Image(i, bufferViews) for i in jsonData["images"]]
+		samplers = [Sampler(s) for s in jsonData["samplers"]]
+		textures = [Texture(t, samplers, images) for t in jsonData["textures"]]
+		materials = [Material(m, textures) for m in jsonData["materials"]]
+		meshes = [Mesh(m, accessors, materials) for m in jsonData["meshes"]]
 
 		vrm = Vrm()
 		vrm.json = jsonData
@@ -181,4 +233,8 @@ class Vrm():
 		vrm.bufferViews = bufferViews
 		vrm.acccssors = accessors
 		vrm.meshes = meshes
+		vrm.images = images
+		vrm.samplers = samplers
+		vrm.textures = textures
+		vrm.materials = materials
 		return vrm
